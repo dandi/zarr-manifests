@@ -79,11 +79,13 @@ def print_jsonl(versions, out=sys.stdout):
  schemaVersion: 1,
  fields: ['versionId', 'lastModified', 'size', 'ETag'],
  entries: {"""
+    delim = ''
     for k, r in versions.items():
         # we need to convert last_modified to just iso_time
         assert len(r) >= 3
         r = (r[0], r[1].isoformat()) + r[2:]
-        s += f',\n "{k}": {json.dumps(r)}'
+        s += f'{delim}\n "{k}": {json.dumps(r)}'
+        delim = ','
     s = s.rstrip(',') + "\n}}\n"
     out.write(s)
 
