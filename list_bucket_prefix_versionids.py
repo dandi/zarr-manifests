@@ -76,9 +76,9 @@ def list_versions(bucket_name, prefix, before_last_modified=None):
 def print_jsonl(versions, out=sys.stdout):
     # I want custom formatting that we would have one entry per line
     s = """{
- schemaVersion: 1,
- fields: ['versionId', 'lastModified', 'size', 'ETag'],
- entries: {"""
+ "schemaVersion": 1,
+ "fields": ["versionId", "lastModified", "size", "ETag"],
+ "entries": {"""
     delim = ''
     for k, r in versions.items():
         # we need to convert last_modified to just iso_time
