@@ -68,7 +68,7 @@ def list_versions(bucket_name, prefix, before_last_modified=None):
                 version_id = version['VersionId']
 
                 if key not in version_list or version_list[key][1] < last_modified:
-                    version_list[key] = (version_id, last_modified, version['Size'])
+                    version_list[key] = (version_id, last_modified, version['Size'], version['ETag'].strip('"'))
 
     return version_list
 
@@ -77,12 +77,12 @@ def print_jsonl(versions, out=sys.stdout):
     # I want custom formatting that we would have one entry per line
     s = """{
  schemaVersion: 1,
- fields: ['versionId', 'lastModified', 'size'],
+ fields: ['versionId', 'lastModified', 'size', 'ETag'],
  entries: {"""
     for k, r in versions.items():
         # we need to convert last_modified to just iso_time
-        assert len(r) == 3
-        r = [r[0], r[1].isoformat(), r[2]]
+        assert len(r) >= 3
+        r = (r[0], r[1].isoformat()) + r[2:]
         s += f',\n "{k}": {json.dumps(r)}'
     s = s.rstrip(',') + "\n}}\n"
     out.write(s)
