@@ -18,5 +18,4 @@ aws --no-sign-request s3 ls $p/ \
 	| while read _ zarr; do
 	z=${zarr%*/}
 	time ./list_bucket_prefix_versionids.py $p/$zarr > manifests/$z.json 2>times/$z.out
-	break
 done
