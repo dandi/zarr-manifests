@@ -17,5 +17,5 @@ p=s3://dandiarchive/zarr
 aws --no-sign-request s3 ls $p/ \
 	| while read _ zarr; do
 	z=${zarr%*/}
-	time -o times/$z.out ./list_bucket_prefix_versionids.py $p/$zarr > manifests/$z.json 
+	/usr/bin/time -o times/$z.out ./list_bucket_prefix_versionids.py $p/$zarr > manifests/$z.json 
 done
