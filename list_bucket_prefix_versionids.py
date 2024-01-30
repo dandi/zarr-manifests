@@ -65,6 +65,8 @@ def list_versions(bucket_name, prefix, before_last_modified=None):
                 if before_last_modified and last_modified > before_last_modified:
                     continue
                 key = version['Key'][len(prefix):].lstrip('/')
+                if not version['IsLatest']:
+                    continue
                 version_id = version['VersionId']
 
                 if key not in version_list or version_list[key][1] < last_modified:
