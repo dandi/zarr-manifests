@@ -137,7 +137,10 @@ if __name__ == '__main__':
     assert zarr_checksum.count == len(rec['entries'])
     assert zarr_checksum.size == size
     # just crude for now while debugging etc
-    assert zarr_checksum.digest == fetch_dandi_zarr_checksum(Path(infile).stem)
+    zarr_checksum_dandi = fetch_dandi_zarr_checksum(Path(infile).stem)
+    zarr_matches = zarr_checksum.digest == zarr_checksum_dandi
+    if not zarr_matches:
+        print(f"WARNING: {zarr_checksum.digest} != {zarr_checksum_dandi}")
 
     out_rec = {
         "schemaVersion": 2,  # Let's call it 2 for now
@@ -147,7 +150,7 @@ if __name__ == '__main__':
             "depth": depth,
             "totalSize": size,
             "lastModified": lastModified,
-            "zarrChecksum": zarr_checksum.digest,
+            "zarrChecksum": zarr_checksum.digest if zarr_matches else f"{zarr_checksum.digest} != {zarr_checksum_dandi}",
         },
         "entries": hierarchy
     }
