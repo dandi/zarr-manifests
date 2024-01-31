@@ -3,10 +3,17 @@
 set -eu
 
 p=s3://dandiarchive/zarr
+#echo _ 383b7eb7-d589-40a5-86a9-1ade0b04922c/ \
 aws --no-sign-request s3 ls $p/ \
 	| while read _ zarr; do
 	z=${zarr%*/}
+	# DEBUG since we crashed
+	#echo "$zarr: "
 	m=$(curl --silent "https://api.dandiarchive.org/api/zarr/$z/")
+	if echo "$m" | grep -q '"Not found."'; then
+		echo "$zarr: not found on API server"
+		continue
+	fi
 	name=$(echo $m | jq -r .name)
 	dandiset=$(echo $m | jq -r .dandiset)
 
