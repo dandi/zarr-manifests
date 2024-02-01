@@ -1,2 +1,2 @@
 * annex.largefiles=((mimeencoding=binary)and(largerthan=0))
-manifests/*.json annex.largefiles=anything
+*manifests*/**/*.json annex.largefiles=anything
