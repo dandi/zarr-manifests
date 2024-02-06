@@ -4,8 +4,8 @@ set -eu
 
 set -x
 
-rm -rf  times manifests*
-#mkdir -p times manifests manifests-v2
+#rm -rf  times manifests*
+mkdir -p times manifests manifests-v2
 
 # needs config
 #s3cmd -c ~/.s3cfg-dandi-backup ls s3://dandiarchive/zarr/ \
