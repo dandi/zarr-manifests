@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu
+set -eu -o pipefail
 
 set -x
 
@@ -19,6 +19,7 @@ aws --no-sign-request s3 ls $p/ \
 	z=${zarr%*/}
 	/usr/bin/time -o times/$z.out ./list_bucket_prefix_versionids.py $p/$zarr >| manifests/$z.json 
 	{ 
+		set -eu -o pipefail
 		./convert_schema_1to2.py manifests/$z.json manifests-v2/$z.json;
 		./sort-v2.sh zarr-manifests-v2-sorted  manifests-v2/$z.json;
 	} &
