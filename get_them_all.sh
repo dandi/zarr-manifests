@@ -18,6 +18,10 @@ aws --no-sign-request s3 ls $p/ \
 	| tac \
 	| while read _ zarr; do
 	z=${zarr%*/}
+	if [ -e "manifests/$z.json" ]; then
+		echo "Skipping $z - already present"
+		continue
+	fi
 	/usr/bin/time -o times/$z.out ./list_bucket_prefix_versionids.py $p/$zarr >| manifests/$z.json 
 	{ 
 		set -eu -o pipefail
