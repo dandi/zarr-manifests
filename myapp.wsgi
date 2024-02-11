@@ -31,8 +31,8 @@ def application(environ, start_response):
                 ("Content-Length", str(os.path.getsize(full_path))),
             ]
             start_response(status, response_headers)
-            with open(full_path, "rb") as fp:
-                return iter(lambda: fp.read(65535), b"")
+            fp = open(full_path, "rb")
+            return iter(lambda: fp.read(65535), b"")
         else:
             # List directory contents
             files = []
