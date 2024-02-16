@@ -18,7 +18,7 @@ aws --no-sign-request s3 ls $p/ \
 	| tac \
 	| while read _ zarr; do
 	z=${zarr%*/}
-	if [ -e "manifests/$z.json" ]; then
+	if [ -s "manifests/$z.json" ]; then
 		echo "Skipping $z - already present"
 		continue
 	fi
