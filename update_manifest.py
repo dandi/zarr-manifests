@@ -135,21 +135,24 @@ def main(
     else:
         last_checksum = get_last_saved_checksum(zarr_dir)
         if last_checksum is None:
-            log.info("Zarr does not have any manifests saved; creating new manifest")
+            log.info("Zarr %s does not have any manifests saved; creating new manifest", zarr_id)
             run = True
         elif api_checksum is None:
-            log.info("API reports `null` for Zarr checksum; not doing anything")
+            log.info("API checksum for Zarr %s is reported to be `null`; not doing anything", zarr_id)
             run = False
         elif last_checksum == api_checksum:
             log.info(
-                "API checksum for Zarr equals checksum in latest manifest;"
-                " not doing anything"
+                "API checksum for Zarr %s (%s) equals checksum in latest manifest;"
+                " not doing anything",
+                zarr_id,
+                api_checksum,
             )
             run = False
         else:
             log.info(
-                "API checksum for Zarr (%s) differs from checksum in latest"
+                "API checksum for Zarr %s (%s) differs from checksum in latest"
                 " manifest (%s); creating new manifest",
+                zarr_id,
                 api_checksum,
                 last_checksum,
             )
@@ -181,7 +184,11 @@ def get_last_saved_checksum(zarr_dir: Path) -> str | None:
     for p in zarr_dir.iterdir():
         if p.suffixes == [".json"]:
             with p.open() as fp:
-                stats = json.load(fp)["statistics"]
+                try:
+                    stats = json.load(fp)["statistics"]
+                except Exception as exc:
+                    log.error("Failed to load statistics from %s. Not considering", p, exception=exc)
+                    continue
                 if stats["lastModified"] is not None:
                     last_modified = datetime.fromisoformat(stats["lastModified"])
                     if (
