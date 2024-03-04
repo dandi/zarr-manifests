@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -eu
+set -x 
+
+cd "$(dirname $0)"
+
+source ~/miniconda3.sh
+conda activate zarr-manifests
+
+./get_them_all.sh
+datalad push

@@ -21,5 +21,6 @@ for m in "$@"; do
 	# although current "zarr" is not consistent, but it is not even "zarrs"
 	basedir="$topdir/${stem:0:3}/${stem:3:3}/$stem"
 	mkdir -p "$basedir"
+	rm -f "$basedir/$checksum.$ext"
 	cp --reflink=auto "$m" "$basedir/$checksum.$ext"
 done

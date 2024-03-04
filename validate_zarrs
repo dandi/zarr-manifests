@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -eu
+
+( for d in zarr-manifests-v2-sorted/*/*/*; do zarr=$(basename $d);  rm -rf ~/.cache/zarr_cache ; ./validate_zarr.py https://dandiarchive.s3.amazonaws.com/zarr/$zarr; done ) 2>&1 | tee validate_zarrs.log 
