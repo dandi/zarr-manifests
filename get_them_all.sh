@@ -6,4 +6,4 @@ set -x
 p=s3://dandiarchive/zarr
 aws --no-sign-request s3 ls $p/ \
     | sed -ne '/.*-.*-.*/s,.*PRE \(.*\)/,\1,gp' \
-    | parallel -j 10 echo ./update_manifest.py -i dandi --mode api-check --manifests-root zarr-manifests-v2-sorted '{}'
+    | parallel -j 10 ./update_manifest.py -i dandi --mode api-check --manifests-root zarr-manifests-v2-sorted '{}'
