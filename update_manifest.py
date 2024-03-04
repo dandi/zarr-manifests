@@ -138,7 +138,7 @@ def main(
             log.info("Zarr does not have any manifests saved; creating new manifest")
             run = True
         elif api_checksum is None:
-            log.info("API reports `null` for Zarr checksum; not doing anything")
+            log.info("API reports `null` for Zarr checksum or Zarr is not known to API; not doing anything")
             run = False
         elif last_checksum == api_checksum:
             log.info(
@@ -167,6 +167,8 @@ def main(
 
 def get_checksum_from_api(api_url: str, zarr_id: str) -> str | None:
     r = requests.get(f"{api_url}/zarr/{zarr_id}")
+    if r.status_code == 404:
+        return None
     r.raise_for_status()
     checksum = r.json().get("checksum")
     assert checksum is None or isinstance(checksum, str)
