@@ -10,7 +10,7 @@ def application(environ, start_response):
     request_path = environ.get("PATH_INFO", "")
 
     # Safely construct the full path to avoid security issues
-    full_path = os.path.normpath(os.path.join(base_dir, request_path.strip("/")))
+    full_path = os.path.normpath(os.path.join(base_dir, 'zarr-manifests-v2-sorted', request_path.strip("/")))
 
     # Ensure the requested path is within the base_dir to prevent directory traversal attacks
     if not full_path.startswith(base_dir):
