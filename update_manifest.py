@@ -106,6 +106,79 @@ class Entry:
         return [self.version_id, self.last_modified.isoformat(), self.size, self.etag]
 
 
+@dataclass
+class ManifestUpdater:
+    manifests_root: Path
+    dandi_instance: str
+    mode: str
+
+    @property
+    def bucket(self) -> str:
+        return INSTANCES[self.dandi_instance][0]
+
+    @property
+    def api_url(self) -> str:
+        return INSTANCES[self.dandi_instance][1]
+
+    def get_zarr_dir(self, zarr_id: str) -> Path:
+        return self.manifests_root / zarr_id[:3] / zarr_id[3:6] / zarr_id
+
+    def are_updating(
+        self, zarr_id: str, api_checksum: str | None, zarr_dir: Path
+    ) -> bool:
+        if self.mode == "force":
+            return True
+        last_checksum = get_last_saved_checksum(zarr_dir)
+        if last_checksum is None:
+            log.info(
+                "Zarr %s does not have any manifests saved; creating new manifest",
+                zarr_id,
+            )
+            return True
+        elif api_checksum is None:
+            log.info(
+                "API checksum for Zarr %s is reported to be `null` or Zarr is"
+                " unknown to API; not doing anything",
+                zarr_id,
+            )
+            return False
+        elif last_checksum == api_checksum:
+            log.info(
+                "API checksum for Zarr %s (%s) equals checksum in latest manifest;"
+                " not doing anything",
+                zarr_id,
+                api_checksum,
+            )
+            return False
+        else:
+            log.info(
+                "API checksum for Zarr %s (%s) differs from checksum in latest"
+                " manifest (%s); creating new manifest",
+                zarr_id,
+                api_checksum,
+                last_checksum,
+            )
+            return True
+
+    def update_zarr_with_checksum(self, zarr_id: str, api_checksum: str | None) -> None:
+        zarr_dir = self.get_zarr_dir(zarr_id)
+        if self.are_updating(zarr_id, api_checksum, zarr_dir):
+            builder = ManifestBuilder(api_checksum=api_checksum)
+            prefix = f"zarr/{zarr_id}/"
+            for entry in iter_zarr_entries(self.bucket, prefix):
+                log.debug("Found entry: %s", entry.path)
+                builder.add_entry(entry)
+            builder.dump(zarr_dir)
+
+    def update_zarr(self, zarr_id: str) -> None:
+        api_checksum = get_checksum_from_api(self.api_url, zarr_id)
+        self.update_zarr_with_checksum(zarr_id, api_checksum)
+
+    def update_all_zarrs(self) -> None:
+        for zarr_id, api_checksum in iter_api_zarrs(self.api_url):
+            self.update_zarr_with_checksum(zarr_id, api_checksum)
+
+
 @click.command()
 @click.option(
     "-i", "--dandi-instance", type=click.Choice(list(INSTANCES)), default="dandi"
@@ -117,9 +190,13 @@ class Entry:
     required=True,
 )
 @click.option("-v", "--verbose", is_flag=True)
-@click.argument("zarr_id")
+@click.argument("zarr_id", required=False)
 def main(
-    zarr_id: str, manifests_root: Path, dandi_instance: str, mode: str, verbose: bool
+    zarr_id: str | None,
+    manifests_root: Path,
+    dandi_instance: str,
+    mode: str,
+    verbose: bool,
 ) -> None:
     logging.basicConfig(
         format="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
@@ -128,48 +205,34 @@ def main(
     )
     if verbose:
         log.setLevel(logging.DEBUG)
-    zarr_dir = manifests_root / zarr_id[:3] / zarr_id[3:6] / zarr_id
-    api_checksum = get_checksum_from_api(INSTANCES[dandi_instance][1], zarr_id)
-    if mode == "force":
-        run = True
+    updater = ManifestUpdater(
+        manifests_root=manifests_root, dandi_instance=dandi_instance, mode=mode
+    )
+    if zarr_id is None:
+        updater.update_all_zarrs()
     else:
-        last_checksum = get_last_saved_checksum(zarr_dir)
-        if last_checksum is None:
-            log.info("Zarr %s does not have any manifests saved; creating new manifest", zarr_id)
-            run = True
-        elif api_checksum is None:
-            log.info("API checksum for Zarr %s is reported to be `null` or Zarr is unknown to API; not doing anything", zarr_id)
-            run = False
-        elif last_checksum == api_checksum:
-            log.info(
-                "API checksum for Zarr %s (%s) equals checksum in latest manifest;"
-                " not doing anything",
-                zarr_id,
-                api_checksum,
-            )
-            run = False
-        else:
-            log.info(
-                "API checksum for Zarr %s (%s) differs from checksum in latest"
-                " manifest (%s); creating new manifest",
-                zarr_id,
-                api_checksum,
-                last_checksum,
-            )
-            run = True
-    if not run:
-        return
-    builder = ManifestBuilder(api_checksum=api_checksum)
-    bucket = INSTANCES[dandi_instance][0]
-    prefix = f"zarr/{zarr_id}/"
-    for entry in iter_zarr_entries(bucket, prefix):
-        log.debug("Found entry: %s", entry.path)
-        builder.add_entry(entry)
-    builder.dump(zarr_dir)
+        updater.update_zarr(zarr_id)
+
+
+def iter_api_zarrs(api_url: str) -> Iterator[tuple[str, str | None]]:
+    with requests.Session() as s:
+        url: str | None = f"{api_url}/zarr/"
+        while url is not None:
+            r = s.get(url)
+            r.raise_for_status()
+            data = r.json()
+            for zobj in data["results"]:
+                zarr_id = zobj["zarr_id"]
+                checksum = zobj["checksum"]
+                log.info(
+                    "Found Zarr %s (checksum = %s) in API listing", zarr_id, checksum
+                )
+                yield (zarr_id, checksum)
+            url = data["next"]
 
 
 def get_checksum_from_api(api_url: str, zarr_id: str) -> str | None:
-    r = requests.get(f"{api_url}/zarr/{zarr_id}")
+    r = requests.get(f"{api_url}/zarr/{zarr_id}/")
     if r.status_code == 404:
         return None
     r.raise_for_status()
@@ -188,8 +251,11 @@ def get_last_saved_checksum(zarr_dir: Path) -> str | None:
             with p.open() as fp:
                 try:
                     stats = json.load(fp)["statistics"]
-                except Exception as exc:
-                    log.error("Failed to load statistics from %s. Not considering", p, exception=exc)
+                except Exception:
+                    log.exception(
+                        "Failed to load statistics from %s. Not considering",
+                        p,
+                    )
                     continue
                 if stats["lastModified"] is not None:
                     last_modified = datetime.fromisoformat(stats["lastModified"])
