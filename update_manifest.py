@@ -90,6 +90,9 @@ class ManifestBuilder:
         zarr_dir.mkdir(parents=True, exist_ok=True)
         p = zarr_dir / f"{checksum}.json"
         log.info("Saving manifest to %s", p)
+        if p.exists() or p.is_symlink():
+            log.info("Rewriting already existing %s", p)
+            p.unlink()
         with p.open("w") as fp:
             json.dump(data, fp, cls=MyJSONEncoder, indent=1)
 
