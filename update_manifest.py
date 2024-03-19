@@ -244,10 +244,15 @@ def get_checksum_from_api(api_url: str, zarr_id: str) -> str | None:
 def get_last_saved_checksum(zarr_dir: Path) -> str | None:
     if not zarr_dir.is_dir():
         return None
-    latest_modification: datetime | None = None
-    latest_checksum: str | None = None
-    for p in zarr_dir.iterdir():
-        if p.suffixes == [".json"]:
+    candidates = [p for p in zarr_dir.iterdir() if p.suffixes == [".json"]]
+    if not candidates:
+        return None
+    elif len(candidates) == 1:
+        return candidates[0].stem
+    else:
+        latest_modification: datetime | None = None
+        latest_checksum: str | None = None
+        for p in candidates:
             with p.open() as fp:
                 try:
                     stats = json.load(fp)["statistics"]
