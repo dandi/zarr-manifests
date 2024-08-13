@@ -8,5 +8,5 @@ cd "$(dirname $0)"
 source ~/miniconda3.sh
 conda activate zarr-manifests
 
-datalad run -m "Do an update sweep over manifests" duct ./get_them_all.sh "$@"
+datalad run -m "Do an update sweep over manifests" /usr/bin/time ./get_them_all.sh "$@"
 datalad push
